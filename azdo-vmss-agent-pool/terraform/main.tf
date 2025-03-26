@@ -114,9 +114,25 @@ resource "azurerm_linux_virtual_machine_scale_set" "deployment" {
     environment              = "prod"
     __AzureDevOpsElasticPool = "vmss-pool"
   }
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.deployment.id]
+  }
 }
 
 # Data template Bash bootstrapping file
 data "local_file" "cloudinit" {
   filename = "${path.module}/cloudinit.conf"
+}
+
+resource "azurerm_user_assigned_identity" "deployment" {
+  resource_group_name = azurerm_resource_group.resourcegroup.name
+  location            = azurerm_resource_group.resourcegroup.location
+  name                = module.naming.user_assigned_identity.name
+}
+
+resource "azurerm_role_assignment" "deployment" {
+  scope                = azurerm_resource_group.resourcegroup.id
+  role_definition_name = "AcrPush"
+  principal_id         = azurerm_user_assigned_identity.deployment.principal_id
 }
